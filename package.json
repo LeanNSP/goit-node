@@ -2,11 +2,11 @@
   "name": "goit-node-hw-01",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./api/start.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node api/start.js",
+    "dev": "nodemon api/start.js --ignore db/"
   },
   "author": "Sergii Nepsha <nsp.lean@gmail.com>",
   "license": "ISC",
@@ -14,6 +14,11 @@
     "nodemon": "^2.0.5"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "joi": "^17.3.0",
+    "morgan": "^1.10.0",
     "yargs": "^16.1.0"
   }
 }

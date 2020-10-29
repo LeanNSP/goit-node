@@ -5,9 +5,8 @@ const NotFoundError = require("../errorHandlers/NotFoundError");
 
 const contactsPath = path.join(__dirname, "../../db/contacts.json");
 
-/*
- * Makes a request to read the contacts.json file 
- * and passes the list of contacts in JSON format
+/**
+ * @return {Object}
  */
 async function readList() {
     try {
@@ -18,8 +17,10 @@ async function readList() {
     }
 }
 
-/*
- * Writes the updated contact list to the database.
+/**
+ * @param {Object} updList
+ * 
+ * @return {Object}
  */
 async function writeList(updList) {
     const rewrait = JSON.stringify(updList, null, 2);
@@ -31,16 +32,21 @@ async function writeList(updList) {
     }
 }
 
-/*
- * Checks whether the request body is not empty.
+/**
+ * @param {Object} body
+ * 
+ * @return {number}
  */
 function noEmptyBody(body) {
     return Object.keys(body).length;
 }
 
-/*
- * Checks whether there is a contact with the desired ID in the contact list.
- * If there is a contact, returns its ID.
+/**
+ * @param {Object} list
+ * @param {number} contactId
+ * @param {} res
+ * 
+ * @return {number}
  */
 function checkIndexById(list, contactId, res) {
     const index = list.findIndex(({ id }) => id === contactId);

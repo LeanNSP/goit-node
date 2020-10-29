@@ -3,6 +3,9 @@
 const argv = require('yargs').argv;
 const contacts = require("./contacts");
 
+/**
+ * @param {{action: string, id: number, name: string, email: string, phone: string}} argv
+ */
 async function invokeAction({ action, id, name, email, phone }) {
   switch (action) {
     case 'list':

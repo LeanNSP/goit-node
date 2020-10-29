@@ -3,10 +3,8 @@ const { promises: fsPromises } = require('fs');
 
 const contactsPath = path.join(__dirname, "./db/contacts.json");
 
-// TODO: задокументировать каждую функцию
-/*
- * Makes a request to read the contacts.json file 
- * and passes the list of contacts in JSON format
+/**
+ * @return {Object}
  */
 async function listContacts() {
     const listStr = await fsPromises.readFile(contactsPath, "utf-8");
@@ -14,9 +12,9 @@ async function listContacts() {
     return JSON.parse(listStr);
 }
 
-/*
- * Looking for a contact by id in the contact list.
- * Return it if found, return null if not found.
+/**
+ * @param {number} contactId
+ * @return {Object | null}
  */
 async function getContactById(contactId) {
     const list = await listContacts();
@@ -28,10 +26,9 @@ async function getContactById(contactId) {
     return  null;
 }
   
-/*
- * Deleting a contact by id.
- * If the contact is in the contact list, delete it and return true.
- * If it is not in the contact list, it returns false.
+/**
+ * @param {number} contactId
+ * @return {boolean}
  */
 async function removeContact(contactId) {
     const list = await listContacts();
@@ -48,9 +45,11 @@ async function removeContact(contactId) {
     return false;
 }
   
-/*
- * Create a new contact and add it to the contact list.
- * Return this new contact.
+/**
+ * @param {string} name
+ * @param {string} email
+ * @param {string} phone
+ * @return {Object}
  */
 async function addContact(name, email, phone) {
     const list = await listContacts();
@@ -66,10 +65,10 @@ async function addContact(name, email, phone) {
     return newContact;
 }
 
-/*
- * Checked the contact list by id.
- * If the id is found, return true.
- * If the id is not found, it return false.
+/**
+ * @param {Object<Array>} list
+ * @param {number} contactId
+ * @return {boolean}
  */
 const checkedID = (list, contactId) => list.some(({ id }) => id === contactId);
 

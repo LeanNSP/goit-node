@@ -4,9 +4,12 @@ const contactUtils = require("./contact.utils");
 const ServerError = require("../errorHandlers/ServerError");
 
 module.exports = class ContactController {
-    /*
-     * Getting a list of contacts and
-     * sending them on front-end in JSON format
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static async listContacts(req, res, next) {
         try {
@@ -18,8 +21,12 @@ module.exports = class ContactController {
         }
     }
 
-    /*
-     * Looking for a contact by id in the contact list.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static async getContactById(req, res, next) {
         try {
@@ -35,9 +42,12 @@ module.exports = class ContactController {
         }
     }
 
-    /*
-     * Create a new contact and add it to the contact list.
-     * Return this new contact.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static async addContact(req, res, next) {
         try {
@@ -57,8 +67,12 @@ module.exports = class ContactController {
         }
     }
 
-    /*
-     * Deleting a contact by id.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static async removeContact(req, res, next) {
         try {
@@ -78,8 +92,12 @@ module.exports = class ContactController {
         }
     }
     
-    /*
-     * Updating a contact by id.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static async updContact(req, res, next) {
         try {
@@ -102,8 +120,12 @@ module.exports = class ContactController {
         }
     }
 
-    /*
-     * Checking data in the body of the contact creation request.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static validateAddContact(req, res, next) {
         const addContactRules = Joi.object({
@@ -121,8 +143,12 @@ module.exports = class ContactController {
         next();
     }
     
-    /*
-     * Checking data in the body of the contact updation request.
+    /**
+     * @param {} req
+     * @param {} res
+     * @param {} next
+     *
+     * @returns {}
      */
     static validateUpdContact(req, res, next) {
         const updContactRules = Joi.object({

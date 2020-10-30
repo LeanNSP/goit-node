@@ -6,7 +6,7 @@ const NotFoundError = require("../errorHandlers/NotFoundError");
 const contactsPath = path.join(__dirname, "../../db/contacts.json");
 
 /**
- * @return {Object}
+ * @return {Promise<any>}
  */
 async function readList() {
     try {
@@ -20,7 +20,7 @@ async function readList() {
 /**
  * @param {Object} updList
  * 
- * @return {Object}
+ * @return {Promise<any>}
  */
 async function writeList(updList) {
     const rewrait = JSON.stringify(updList, null, 2);
@@ -44,9 +44,9 @@ function noEmptyBody(body) {
 /**
  * @param {Object} list
  * @param {number} contactId
- * @param {} res
+ * @param {import('express').Response} res
  * 
- * @return {number}
+ * @return {number | Object}
  */
 function checkIndexById(list, contactId, res) {
     const index = list.findIndex(({ id }) => id === contactId);

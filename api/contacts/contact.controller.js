@@ -5,11 +5,9 @@ const ServerError = require("../errorHandlers/ServerError");
 
 module.exports = class ContactController {
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static async listContacts(req, res, next) {
         try {
@@ -22,11 +20,9 @@ module.exports = class ContactController {
     }
 
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static async getContactById(req, res, next) {
         try {
@@ -43,11 +39,9 @@ module.exports = class ContactController {
     }
 
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static async addContact(req, res, next) {
         try {
@@ -68,11 +62,9 @@ module.exports = class ContactController {
     }
 
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static async removeContact(req, res, next) {
         try {
@@ -93,11 +85,9 @@ module.exports = class ContactController {
     }
     
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static async updContact(req, res, next) {
         try {
@@ -121,11 +111,9 @@ module.exports = class ContactController {
     }
 
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static validateAddContact(req, res, next) {
         const addContactRules = Joi.object({
@@ -134,6 +122,9 @@ module.exports = class ContactController {
             phone: Joi.string().required(),
         })
 
+        /**
+         * @type {name: string, email: string, phone: string,} ContactRequestPayload
+         */
         const result = addContactRules.validate(req.body);
 
         if (result.error) {
@@ -144,11 +135,9 @@ module.exports = class ContactController {
     }
     
     /**
-     * @param {} req
-     * @param {} res
-     * @param {} next
-     *
-     * @returns {}
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
      */
     static validateUpdContact(req, res, next) {
         const updContactRules = Joi.object({
@@ -157,6 +146,9 @@ module.exports = class ContactController {
             phone: Joi.string(),
         })
 
+        /**
+         * @type {name: string, email: string, phone: string,} ContactRequestPayload
+         */
         const result = updContactRules.validate(req.body);
 
         if (result.error || !contactUtils.noEmptyBody(req.body)) {

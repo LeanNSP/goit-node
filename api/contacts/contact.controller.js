@@ -1,5 +1,9 @@
 const Joi = require('joi');
+const {
+  Types: { ObjectId },
+} = require('mongoose');
 
+const contactModel = require('./contact.model');
 const contactUtils = require('./contact.utils');
 const ServerError = require('../errorHandlers/ServerError');
 
@@ -9,10 +13,11 @@ module.exports = class ContactController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static async listContacts(req, res, next) {
+  static async getContacts(req, res, next) {
     try {
-      const list = await contactUtils.readList();
-      return res.json(list);
+      const contacts = await contactModel.find();
+
+      return res.status(200).json(contacts);
     } catch (error) {
       next(new ServerError('problem on the server'));
     }
@@ -25,12 +30,16 @@ module.exports = class ContactController {
    */
   static async getContactById(req, res, next) {
     try {
-      const contactId = parseInt(req.params.id);
-      const list = await contactUtils.readList();
+      const contactId = req.params.id;
 
-      const targetContactIndex = contactUtils.checkIndexById(list, contactId, res);
+      const desiredContact = await contactModel.findById(contactId);
 
-      return res.status(200).json(list[targetContactIndex]);
+      if (!desiredContact) {
+        res.status(404).json({ message: 'Not found' });
+        throw new NotFoundError('Not found');
+      }
+
+      return res.status(200).json(desiredContact);
     } catch (error) {
       next(new ServerError('problem on the server'));
     }
@@ -43,14 +52,7 @@ module.exports = class ContactController {
    */
   static async addContact(req, res, next) {
     try {
-      const list = await contactUtils.readList();
-      const newContact = {
-        ...req.body,
-        id: list[list.length - 1].id + 1,
-      };
-      const updList = [...list, newContact];
-
-      await contactUtils.writeList(updList);
+      const newContact = await contactModel.create(req.body);
 
       return res.status(201).json(newContact);
     } catch (error) {
@@ -65,16 +67,17 @@ module.exports = class ContactController {
    */
   static async removeContact(req, res, next) {
     try {
-      const contactId = parseInt(req.params.id);
-      const list = await contactUtils.readList();
+      const contactId = req.params.id;
 
-      contactUtils.checkIndexById(list, contactId, res);
+      const deletedContact = await contactModel.findByIdAndDelete(contactId);
+      console.log(deletedContact);
 
-      const updList = list.filter(({ id }) => id !== contactId);
+      if (!deletedContact) {
+        res.status(404).json({ message: 'Not found' });
+        throw new NotFoundError('Not found');
+      }
 
-      await contactUtils.writeList(updList);
-
-      return res.status(200).json({ message: 'contact deleted' });
+      return res.status(200).json(deletedContact);
     } catch (error) {
       next(new ServerError('problem on the server'));
     }
@@ -87,22 +90,29 @@ module.exports = class ContactController {
    */
   static async updContact(req, res, next) {
     try {
-      const contactId = parseInt(req.params.id);
-      const list = await contactUtils.readList();
+      const contactId = req.params.id;
 
-      const targetContactIndex = contactUtils.checkIndexById(list, contactId, res);
+      const updatedContact = await contactModel.findContactByIdAndUpdate(contactId, req.body);
 
-      list[targetContactIndex] = {
-        ...list[targetContactIndex],
-        ...req.body,
-      };
+      if (!updatedContact) {
+        res.status(404).json({ message: 'Not found' });
+        throw new NotFoundError('Not found');
+      }
 
-      await contactUtils.writeList(list);
-
-      return res.status(200).json(list[targetContactIndex]);
+      return res.status(200).json(updatedContact);
     } catch (error) {
       next(new ServerError('problem on the server'));
     }
+  }
+
+  static validateId(req, res, next) {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send();
+    }
+
+    next();
   }
 
   /**

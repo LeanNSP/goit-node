@@ -4,7 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 
 const contactRouter = require('./contacts/contact.router');
-const ServerError = require('./errorHandlers/ServerError');
+const ErrorHandler = require('./errorHandlers/ErrorHandler');
 
 require('dotenv').config();
 
@@ -38,17 +38,17 @@ module.exports = class PhonebookServer {
   initRoutes() {
     this.server.use('/contacts', contactRouter);
   }
-  // TODO
+
   async initDB() {
     try {
-      // throw new Error();
       const connectDB = await mongoose.connect(process.env.MONGODB_URL);
+
       if (connectDB) {
         console.log('Database connection successful');
       }
     } catch (error) {
-      new ServerError('problem on the server');
-      // process.exit(1);
+      new ErrorHandler(500, 'problem on the server');
+      process.exit(1);
     }
   }
 

@@ -5,7 +5,7 @@ const {
 
 const contactModel = require('./contact.model');
 const contactUtils = require('./contact.utils');
-const ServerError = require('../errorHandlers/ServerError');
+const ErrorHandler = require('../errorHandlers/ErrorHandler');
 
 module.exports = class ContactController {
   /**
@@ -19,7 +19,7 @@ module.exports = class ContactController {
 
       return res.status(200).json(contacts);
     } catch (error) {
-      next(new ServerError('problem on the server'));
+      next(new ErrorHandler(503, 'Service Unavailable', res));
     }
   }
 
@@ -35,13 +35,12 @@ module.exports = class ContactController {
       const desiredContact = await contactModel.findById(contactId);
 
       if (!desiredContact) {
-        res.status(404).json({ message: 'Not found' });
-        throw new NotFoundError('Not found');
+        throw new ErrorHandler(404, 'Not found', res);
       }
 
       return res.status(200).json(desiredContact);
     } catch (error) {
-      next(new ServerError('problem on the server'));
+      next(new ErrorHandler(503, 'Service Unavailable', res));
     }
   }
 
@@ -56,7 +55,7 @@ module.exports = class ContactController {
 
       return res.status(201).json(newContact);
     } catch (error) {
-      next(new ServerError('problem on the server'));
+      next(new ErrorHandler(503, 'Service Unavailable', res));
     }
   }
 
@@ -73,13 +72,12 @@ module.exports = class ContactController {
       console.log(deletedContact);
 
       if (!deletedContact) {
-        res.status(404).json({ message: 'Not found' });
-        throw new NotFoundError('Not found');
+        throw new ErrorHandler(404, 'Not found', res);
       }
 
       return res.status(200).json(deletedContact);
     } catch (error) {
-      next(new ServerError('problem on the server'));
+      next(new ErrorHandler(503, 'Service Unavailable', res));
     }
   }
 
@@ -95,21 +93,25 @@ module.exports = class ContactController {
       const updatedContact = await contactModel.findContactByIdAndUpdate(contactId, req.body);
 
       if (!updatedContact) {
-        res.status(404).json({ message: 'Not found' });
-        throw new NotFoundError('Not found');
+        throw new ErrorHandler(404, 'Not found', res);
       }
 
       return res.status(200).json(updatedContact);
     } catch (error) {
-      next(new ServerError('problem on the server'));
+      next(new ErrorHandler(503, 'Service Unavailable', res));
     }
   }
 
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
   static validateId(req, res, next) {
     const { id } = req.params;
 
     if (!ObjectId.isValid(id)) {
-      return res.status(400).send();
+      throw new ErrorHandler(400, 'Bad Request', res);
     }
 
     next();
@@ -133,7 +135,7 @@ module.exports = class ContactController {
     const result = addContactRules.validate(req.body);
 
     if (result.error) {
-      return res.status(400).json({ message: 'missing required name field' });
+      throw new ErrorHandler(400, 'missing required name field', res);
     }
 
     next();
@@ -157,7 +159,7 @@ module.exports = class ContactController {
     const result = updContactRules.validate(req.body);
 
     if (result.error || !contactUtils.noEmptyBody(req.body)) {
-      return res.status(400).json({ message: 'missing fields' });
+      throw new ErrorHandler(400, 'missing fields', res);
     }
 
     next();

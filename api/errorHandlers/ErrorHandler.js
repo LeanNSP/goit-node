@@ -4,6 +4,9 @@ module.exports = class ErrorHandler extends Error {
 
     this.status = statusCode;
     delete this.stack;
+
+    console.log('\x1b[31m%s\x1b[0m', `${statusCode} ${message}`);
+
     if (res) {
       res.status(statusCode).json({ message });
     }

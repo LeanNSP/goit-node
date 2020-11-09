@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 
 const contactRouter = require('./contacts/contact.router');
+const authRouter = require('./users/auth/auth.router');
 const ErrorHandler = require('./errorHandlers/ErrorHandler');
 
 require('dotenv').config();
@@ -37,6 +38,7 @@ module.exports = class PhonebookServer {
 
   initRoutes() {
     this.server.use('/contacts', contactRouter);
+    this.server.use('/auth', authRouter);
   }
 
   async initDB() {
@@ -44,7 +46,7 @@ module.exports = class PhonebookServer {
       const connectDB = await mongoose.connect(process.env.MONGODB_URL);
 
       if (connectDB) {
-        console.log('Database connection successful');
+        console.log('\x1b[33m%s\x1b[0m', 'Database connection successful');
       }
     } catch (error) {
       new ErrorHandler(500, 'problem on the server');
@@ -54,7 +56,7 @@ module.exports = class PhonebookServer {
 
   startListening() {
     this.server.listen(process.env.PORT, () => {
-      console.log(`Server started listening on port ${process.env.PORT}`);
+      console.log('\x1b[36m%s\x1b[0m', `Server started listening on port ${process.env.PORT}`);
     });
   }
 };

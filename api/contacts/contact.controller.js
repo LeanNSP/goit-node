@@ -69,7 +69,6 @@ module.exports = class ContactController {
       const contactId = req.params.id;
 
       const deletedContact = await contactModel.findByIdAndDelete(contactId);
-      console.log(deletedContact);
 
       if (!deletedContact) {
         throw new ErrorHandler(404, 'Not found', res);

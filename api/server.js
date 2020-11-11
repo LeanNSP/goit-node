@@ -5,6 +5,7 @@ const morgan = require('morgan');
 
 const contactRouter = require('./contacts/contact.router');
 const authRouter = require('./users/auth/auth.router');
+const usersRouter = require('./users/user.router');
 const ErrorHandler = require('./errorHandlers/ErrorHandler');
 
 require('dotenv').config();
@@ -39,6 +40,7 @@ module.exports = class PhonebookServer {
   initRoutes() {
     this.server.use('/contacts', contactRouter);
     this.server.use('/auth', authRouter);
+    this.server.use('/users', usersRouter);
   }
 
   async initDB() {

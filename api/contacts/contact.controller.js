@@ -15,7 +15,10 @@ module.exports = class ContactController {
    */
   static async getContacts(req, res, next) {
     try {
-      const contacts = await contactModel.find();
+      const { page, limit } = req.query;
+      const options = { page, limit };
+
+      const contacts = await contactModel.paginate({}, options, (error, result) => result.docs);
 
       return res.status(200).json(contacts);
     } catch (error) {

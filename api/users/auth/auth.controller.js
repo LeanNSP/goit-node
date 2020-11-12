@@ -121,15 +121,15 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static validateEmailAndPassword(req, res, next) {
-    const registerUserRules = Joi.object({
+    const emailAndPasswordRules = Joi.object({
       email: Joi.string().required(),
       password: Joi.string().required(),
     });
 
     /**
-     * @type {name: string, email: string, phone: string,}
+     * @type {email: string, password: string}
      */
-    const result = registerUserRules.validate(req.body);
+    const result = emailAndPasswordRules.validate(req.body);
 
     if (result.error) {
       throw new ErrorHandler(400, 'You entered invalid data.', res);

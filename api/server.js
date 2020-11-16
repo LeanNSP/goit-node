@@ -1,14 +1,16 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const morgan = require('morgan');
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const morgan = require("morgan");
+const multer = require("multer");
+// const upload = multer({ dest: "uploads/" });
 
-const contactRouter = require('./contacts/contact.router');
-const authRouter = require('./users/auth/auth.router');
-const usersRouter = require('./users/user.router');
-const ErrorHandler = require('./errorHandlers/ErrorHandler');
+const contactRouter = require("./contacts/contact.router");
+const authRouter = require("./users/auth/auth.router");
+const usersRouter = require("./users/user.router");
+const ErrorHandler = require("./errorHandlers/ErrorHandler");
 
-require('dotenv').config();
+require("dotenv").config();
 
 module.exports = class PhonebookServer {
   constructor() {
@@ -20,6 +22,7 @@ module.exports = class PhonebookServer {
     this.initLogger();
     this.initMiddlewares();
     this.initRoutes();
+    this.initReturnsStaticFiles();
     await this.initDB();
     this.startListening();
   }
@@ -29,18 +32,22 @@ module.exports = class PhonebookServer {
   }
 
   initLogger() {
-    this.server.use(morgan('dev'));
+    this.server.use(morgan("dev"));
   }
 
   initMiddlewares() {
     this.server.use(express.json());
-    this.server.use(cors({ origin: 'http://localhost:3100' }));
+    this.server.use(cors({ origin: "http://localhost:3100" }));
   }
 
   initRoutes() {
-    this.server.use('/contacts', contactRouter);
-    this.server.use('/auth', authRouter);
-    this.server.use('/users', usersRouter);
+    this.server.use("/contacts", contactRouter);
+    this.server.use("/auth", authRouter);
+    this.server.use("/users", usersRouter);
+  }
+
+  initReturnsStaticFiles() {
+    this.server.use(express.static("public"));
   }
 
   async initDB() {
@@ -48,17 +55,17 @@ module.exports = class PhonebookServer {
       const connectDB = await mongoose.connect(process.env.MONGODB_URL);
 
       if (connectDB) {
-        console.log('\x1b[33m%s\x1b[0m', 'Database connection successful');
+        console.log("\x1b[33m%s\x1b[0m", "Database connection successful");
       }
     } catch (error) {
-      new ErrorHandler(500, 'problem on the server');
+      new ErrorHandler(500, "problem on the server");
       process.exit(1);
     }
   }
 
   startListening() {
     this.server.listen(process.env.PORT, () => {
-      console.log('\x1b[36m%s\x1b[0m', `Server started listening on port ${process.env.PORT}`);
+      console.log("\x1b[36m%s\x1b[0m", `Server started listening on port ${process.env.PORT}`);
     });
   }
 };

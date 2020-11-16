@@ -6,6 +6,7 @@ require("dotenv").config();
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
+  avatarURL: { type: String },
   subscription: {
     type: String,
     enum: process.env.SUBSCRIPTION_ENUM.split(" "),

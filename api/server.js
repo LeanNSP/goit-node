@@ -2,8 +2,6 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const morgan = require("morgan");
-const multer = require("multer");
-// const upload = multer({ dest: "uploads/" });
 
 const contactRouter = require("./contacts/contact.router");
 const authRouter = require("./users/auth/auth.router");
@@ -50,6 +48,7 @@ module.exports = class PhonebookServer {
     this.server.use(express.static("public"));
   }
 
+  // TODO
   async initDB() {
     try {
       const connectDB = await mongoose.connect(process.env.MONGODB_URL);

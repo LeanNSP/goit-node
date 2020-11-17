@@ -1,27 +1,14 @@
 const Joi = require("joi");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const Avatar = require("avatar-builder");
-const fs = require("fs");
-const { promises: fsPromises } = require("fs");
 
 const userModel = require("../user.model");
-const { nonSecretUserInfo } = require("../user.utils");
+const { nonSecretUserInfo, clearTempDir } = require("../user.utils");
 const ErrorHandler = require("../../errorHandlers/ErrorHandler");
 
 require("dotenv").config();
 
-const avatar = Avatar.githubBuilder(128);
-
 const COST_FACTOR = 6; // number of hashing cycles
-
-// async function createAvatar(buffer) {
-//   await fsPromises.writeFile("./tmp/avatar.png", buffer);
-// }
-
-async function createAvatar() {
-  await fsPromises.writeFile("./tmp/avatar.png", await avatar.create("gabriel"));
-}
 
 module.exports = class AuthController {
   /**
@@ -30,19 +17,19 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async registerUser(req, res, next) {
-    const { password, email } = req.body;
-
     try {
+      const { password, email } = req.body;
+
       const passwordHash = await bcryptjs.hash(password, COST_FACTOR);
+      //TODO
+      // await createAvatar(email);
 
-      // const bufferAvatar = await avatar.create("gabriel");
-      await createAvatar();
-
-      // avatar.create("gabriel").then(buffer => fs.writeFileSync("./tmp/avatar.png", buffer));
+      console.log(`http://localhost:${process.env.PORT}${req.file.path}`); ///
 
       const registeredUser = await userModel.create({
         email,
         passwordHash,
+        avatarURL: `http://localhost:${process.env.PORT}${req.file.path}`,
       });
 
       return res.status(201).json(nonSecretUserInfo(registeredUser));
@@ -150,6 +137,7 @@ module.exports = class AuthController {
     const result = emailAndPasswordRules.validate(req.body);
 
     if (result.error) {
+      clearTempDir(req);
       throw new ErrorHandler(400, "You entered invalid data.", res);
     }
 
@@ -168,6 +156,7 @@ module.exports = class AuthController {
       const existingUser = await userModel.findUserByEmail(email);
 
       if (existingUser) {
+        clearTempDir(req);
         throw new ErrorHandler(409, "Email in use", res);
       }
     } catch (error) {

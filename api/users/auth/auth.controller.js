@@ -3,12 +3,10 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const userModel = require("../user.model");
-const { nonSecretUserInfo, clearTempDir } = require("../user.utils");
+const { nonSecretUserInfo, createAvatar, clearTempDir } = require("../user.utils");
 const ErrorHandler = require("../../errorHandlers/ErrorHandler");
 
 require("dotenv").config();
-
-const COST_FACTOR = 6; // number of hashing cycles
 
 module.exports = class AuthController {
   /**
@@ -20,11 +18,7 @@ module.exports = class AuthController {
     try {
       const { password, email } = req.body;
 
-      const passwordHash = await bcryptjs.hash(password, COST_FACTOR);
-      //TODO
-      // await createAvatar(email);
-
-      console.log(`http://localhost:${process.env.PORT}${req.file.path}`); ///
+      const passwordHash = await bcryptjs.hash(password, process.env.COST_FACTOR); //COST_FACTOR - number of hashing cycles
 
       const registeredUser = await userModel.create({
         email,
@@ -44,9 +38,9 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async loginUser(req, res, next) {
-    const { password, email } = req.body;
-
     try {
+      const { password, email } = req.body;
+
       const existingUser = await userModel.findUserByEmail(email);
       if (!existingUser) {
         throw new ErrorHandler(401, "Email or password is wrong", res);
@@ -150,9 +144,9 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async validateUniqueEmail(req, res, next) {
-    const { email } = req.body;
-
     try {
+      const { email } = req.body;
+
       const existingUser = await userModel.findUserByEmail(email);
 
       if (existingUser) {
@@ -164,5 +158,24 @@ module.exports = class AuthController {
     }
 
     next();
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async defaultAvatar(req, res, next) {
+    try {
+      const { email } = req.body;
+      if (!req.file) {
+        const avatar = await createAvatar(email);
+
+        req.file = { ...avatar };
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
   }
 };

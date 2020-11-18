@@ -18,6 +18,7 @@ const userSchema = new Schema({
 userSchema.statics.findUserByEmail = findUserByEmail;
 userSchema.statics.updToken = updToken;
 userSchema.statics.updSubscr = updSubscr;
+userSchema.statics.updAvatar = updAvatar;
 
 async function findUserByEmail(email) {
   return this.findOne({ email });
@@ -29,6 +30,10 @@ async function updToken(id, newToken) {
 
 async function updSubscr(id, subscription) {
   return this.findByIdAndUpdate(id, { subscription });
+}
+
+async function updAvatar(id, avatarURL) {
+  return this.findByIdAndUpdate(id, { avatarURL });
 }
 
 // users

@@ -10,6 +10,20 @@ usersRouter.get("/current", AuthController.authorize, UserController.getCurrentU
 usersRouter.get("/", UserController.getFilteredBySubscription);
 
 usersRouter.patch(
+  "/avatars",
+  AuthController.authorize,
+  UserController.upload.single("avatar"),
+  UserController.minifyImage,
+  (req, res, next) => {
+    console.log("req.user", req.user);
+    console.log("req.file", req.file);
+    console.log("req.body", req.body);
+    next();
+  },
+  UserController.updateAvatar,
+);
+
+usersRouter.patch(
   "/",
   AuthController.authorize,
   UserController.validateSubscription,

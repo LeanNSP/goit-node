@@ -1,11 +1,11 @@
-const Joi = require('joi');
+const Joi = require("joi");
 const {
   Types: { ObjectId },
-} = require('mongoose');
+} = require("mongoose");
 
-const contactModel = require('./contact.model');
-const contactUtils = require('./contact.utils');
-const ErrorHandler = require('../errorHandlers/ErrorHandler');
+const contactModel = require("./contact.model");
+const { noEmptyBody } = require("../helpers");
+const ErrorHandler = require("../errorHandlers/ErrorHandler");
 
 module.exports = class ContactController {
   /**
@@ -22,7 +22,7 @@ module.exports = class ContactController {
 
       return res.status(200).json(contacts);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(503, "Service Unavailable", res));
     }
   }
 
@@ -38,12 +38,12 @@ module.exports = class ContactController {
       const desiredContact = await contactModel.findById(contactId);
 
       if (!desiredContact) {
-        throw new ErrorHandler(404, 'Not found', res);
+        throw new ErrorHandler(404, "Not found", res);
       }
 
       return res.status(200).json(desiredContact);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(503, "Service Unavailable", res));
     }
   }
 
@@ -58,7 +58,7 @@ module.exports = class ContactController {
 
       return res.status(201).json(newContact);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(503, "Service Unavailable", res));
     }
   }
 
@@ -74,12 +74,12 @@ module.exports = class ContactController {
       const deletedContact = await contactModel.findByIdAndDelete(contactId);
 
       if (!deletedContact) {
-        throw new ErrorHandler(404, 'Not found', res);
+        throw new ErrorHandler(404, "Not found", res);
       }
 
       return res.status(200).json(deletedContact);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(503, "Service Unavailable", res));
     }
   }
 
@@ -95,12 +95,12 @@ module.exports = class ContactController {
       const updatedContact = await contactModel.findContactByIdAndUpdate(contactId, req.body);
 
       if (!updatedContact) {
-        throw new ErrorHandler(404, 'Not found', res);
+        throw new ErrorHandler(404, "Not found", res);
       }
 
       return res.status(200).json(updatedContact);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(503, "Service Unavailable", res));
     }
   }
 
@@ -113,7 +113,7 @@ module.exports = class ContactController {
     const { id } = req.params;
 
     if (!ObjectId.isValid(id)) {
-      throw new ErrorHandler(400, 'Bad Request', res);
+      throw new ErrorHandler(400, "Bad Request", res);
     }
 
     next();
@@ -137,7 +137,7 @@ module.exports = class ContactController {
     const result = addContactRules.validate(req.body);
 
     if (result.error) {
-      throw new ErrorHandler(400, 'missing required name field', res);
+      throw new ErrorHandler(400, "missing required name field", res);
     }
 
     next();
@@ -160,8 +160,8 @@ module.exports = class ContactController {
      */
     const result = updContactRules.validate(req.body);
 
-    if (result.error || !contactUtils.noEmptyBody(req.body)) {
-      throw new ErrorHandler(400, 'missing fields', res);
+    if (result.error || !noEmptyBody(req.body)) {
+      throw new ErrorHandler(400, "missing fields", res);
     }
 
     next();

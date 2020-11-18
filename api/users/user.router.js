@@ -2,6 +2,7 @@ const { Router } = require("express");
 
 const AuthController = require("./auth/auth.controller");
 const UserController = require("./user.controller");
+const { uploadMulter } = require("../helpers");
 
 const usersRouter = Router();
 
@@ -12,14 +13,8 @@ usersRouter.get("/", UserController.getFilteredBySubscription);
 usersRouter.patch(
   "/avatars",
   AuthController.authorize,
-  UserController.upload.single("avatar"),
+  uploadMulter.upload.single("avatar"),
   UserController.minifyImage,
-  (req, res, next) => {
-    console.log("req.user", req.user);
-    console.log("req.file", req.file);
-    console.log("req.body", req.body);
-    next();
-  },
   UserController.updateAvatar,
 );
 

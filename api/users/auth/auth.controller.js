@@ -3,7 +3,7 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const userModel = require("../user.model");
-const { nonSecretUserInfo, createAvatar, clearTempDir } = require("../user.utils");
+const { createAvatar, deleteTempFile, nonSecretUserInfo } = require("../../helpers");
 const ErrorHandler = require("../../errorHandlers/ErrorHandler");
 
 require("dotenv").config();
@@ -17,13 +17,14 @@ module.exports = class AuthController {
   static async registerUser(req, res, next) {
     try {
       const { password, email } = req.body;
+      const { COST_FACTOR, PORT } = process.env;
 
-      const passwordHash = await bcryptjs.hash(password, process.env.COST_FACTOR); //COST_FACTOR - number of hashing cycles
+      const passwordHash = await bcryptjs.hash(password, parseInt(COST_FACTOR)); //COST_FACTOR - number of hashing cycles
 
       const registeredUser = await userModel.create({
         email,
         passwordHash,
-        avatarURL: `http://localhost:${process.env.PORT}${req.file.path}`,
+        avatarURL: `http://localhost:${PORT}${req.file.path}`,
       });
 
       return res.status(201).json(nonSecretUserInfo(registeredUser));
@@ -150,7 +151,7 @@ module.exports = class AuthController {
       const existingUser = await userModel.findUserByEmail(email);
 
       if (existingUser) {
-        clearTempDir(req);
+        deleteTempFile(req);
         throw new ErrorHandler(409, "Email in use", res);
       }
     } catch (error) {

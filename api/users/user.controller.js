@@ -1,22 +1,10 @@
 const Joi = require("joi");
 
-const multer = require("multer");
-const path = require("path");
-
-const { nonSecretUserInfo, clearTempDir, onImagemin } = require("./user.utils");
-
 const userModel = require("./user.model");
+const { deleteTempFile, minimizeImage, nonSecretUserInfo } = require("../helpers");
 const ErrorHandler = require("../errorHandlers/ErrorHandler");
 
 require("dotenv").config();
-
-const storage = multer.diskStorage({
-  destination: "tmp",
-  filename: function (req, file, cb) {
-    const ext = path.parse(file.originalname).ext;
-    cb(null, file.fieldname + "-" + Date.now() + ext);
-  },
-});
 
 module.exports = class UserController {
   /**
@@ -130,9 +118,9 @@ module.exports = class UserController {
       if (req.file) {
         const { filename } = req.file;
 
-        await onImagemin(filename);
+        await minimizeImage(filename);
 
-        await clearTempDir(req);
+        await deleteTempFile(req);
 
         req.file = {
           ...req.file,
@@ -146,6 +134,4 @@ module.exports = class UserController {
       next(error);
     }
   }
-
-  static upload = multer({ storage });
 };

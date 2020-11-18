@@ -2,12 +2,13 @@ const { Router } = require("express");
 
 const AuthController = require("./auth.controller");
 const UserController = require("../user.controller");
+const { uploadMulter } = require("../../helpers");
 
 const authRouter = Router();
 
 authRouter.post(
   "/register",
-  UserController.upload.single("avatar"),
+  uploadMulter.upload.single("avatar"),
   AuthController.validateEmailAndPassword,
   AuthController.validateUniqueEmail,
   AuthController.defaultAvatar,

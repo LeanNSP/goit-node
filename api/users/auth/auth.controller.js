@@ -3,7 +3,13 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const userModel = require("../user.model");
-const { createAvatar, deleteTempFile, nonSecretUserInfo } = require("../../helpers");
+const {
+  checkUserByToken,
+  createAvatar,
+  deleteTempFile,
+  getUserIdWithToken,
+  nonSecretUserInfo,
+} = require("../../helpers");
 const ErrorHandler = require("../../errorHandlers/ErrorHandler");
 
 require("dotenv").config();
@@ -40,29 +46,13 @@ module.exports = class AuthController {
    */
   static async loginUser(req, res, next) {
     try {
-      const { password, email } = req.body;
-
-      const existingUser = await userModel.findUserByEmail(email);
-      if (!existingUser) {
-        throw new ErrorHandler(401, "Email or password is wrong", res);
-      }
-
-      const isPasswordValid = await bcryptjs.compare(password, existingUser.passwordHash);
-      if (!isPasswordValid) {
-        throw new ErrorHandler(401, "Email or password is wrong", res);
-      }
-
-      const { _id } = existingUser;
-      const token = jwt.sign({ id: _id }, process.env.JWT_SECRET, {
-        expiresIn: 2 * 24 * 60 * 60, // token lifetime: 2 days * 24 hours * 60 minutes * 60 seconds
-      });
-      await userModel.updToken(_id, token);
+      const { email } = req.body;
 
       const userWithAnUpdatedToken = await userModel.findUserByEmail(email);
+      const { token } = userWithAnUpdatedToken;
+      const user = nonSecretUserInfo(userWithAnUpdatedToken);
 
-      return res
-        .status(200)
-        .json({ token, user: { ...nonSecretUserInfo(userWithAnUpdatedToken) } });
+      return res.status(200).json({ token, user });
     } catch (error) {
       next(new ErrorHandler(503, "Service Unavailable", res));
     }
@@ -94,17 +84,10 @@ module.exports = class AuthController {
       const authorizationHeader = req.get("Authorization");
       const token = authorizationHeader.replace("Bearer ", "");
 
-      let userId;
-      try {
-        userId = await jwt.verify(token, process.env.JWT_SECRET).id;
-      } catch (error) {
-        throw new Error();
-      }
+      const userId = await getUserIdWithToken(token);
 
       const user = await userModel.findById(userId);
-      if (!user || user.token !== token) {
-        throw new Error();
-      }
+      checkUserByToken(user);
 
       req.user = user;
       req.token = token;
@@ -112,6 +95,69 @@ module.exports = class AuthController {
       next();
     } catch (error) {
       next(new ErrorHandler(401, "Not authorized", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async existingUserByEmail(req, res, next) {
+    try {
+      const { email } = req.body;
+
+      const existingUser = await userModel.findUserByEmail(email);
+      if (!existingUser) {
+        throw new ErrorHandler(401, "Email or password is wrong", res);
+      }
+      req.existingUser = existingUser;
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async isPasswordValid(req, res, next) {
+    try {
+      const { password } = req.body;
+      const { passwordHash } = req.existingUser;
+
+      const isPasswordValid = await bcryptjs.compare(password, passwordHash);
+      if (!isPasswordValid) {
+        throw new ErrorHandler(401, "Email or password is wrong", res);
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async generateAndUpdateToken(req, res, next) {
+    try {
+      const { _id } = req.existingUser;
+
+      const token = jwt.sign({ id: _id }, process.env.JWT_SECRET, {
+        expiresIn: 2 * 24 * 60 * 60, // token lifetime: 2 days * 24 hours * 60 minutes * 60 seconds
+      });
+
+      await userModel.updToken(_id, token);
+
+      next();
+    } catch (error) {
+      throw error;
     }
   }
 

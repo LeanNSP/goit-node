@@ -16,7 +16,14 @@ authRouter.post(
   AuthController.registerUser,
 );
 
-authRouter.post("/login", AuthController.validateEmailAndPassword, AuthController.loginUser);
+authRouter.post(
+  "/login",
+  AuthController.validateEmailAndPassword,
+  AuthController.existingUserByEmail,
+  AuthController.isPasswordValid,
+  AuthController.generateAndUpdateToken,
+  AuthController.loginUser,
+);
 
 authRouter.post("/logout", AuthController.authorize, AuthController.logoutUser);
 

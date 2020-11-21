@@ -3,6 +3,6 @@
  *
  * @return {number}
  */
-module.exports = function noEmptyBody(body) {
+module.exports = function noEmptyObject(body) {
   return Object.keys(body).length;
 };

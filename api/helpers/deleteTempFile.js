@@ -1,10 +1,8 @@
 const { promises: fsPromises } = require("fs");
 
-module.exports = async function deleteTempFile(req) {
+module.exports = async function deleteTempFile(filePath) {
   try {
-    if (req.file) {
-      await fsPromises.unlink(req.file.path);
-    }
+    await fsPromises.unlink(filePath);
   } catch (error) {
     throw error;
   }

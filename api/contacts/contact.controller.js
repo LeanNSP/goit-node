@@ -1,10 +1,6 @@
 const Joi = require("joi");
-const {
-  Types: { ObjectId },
-} = require("mongoose");
 
-const contactModel = require("./contact.model");
-const { noEmptyBody } = require("../helpers");
+const ContactService = require("./contact.service");
 const ErrorHandler = require("../errorHandlers/ErrorHandler");
 
 module.exports = class ContactController {
@@ -16,13 +12,13 @@ module.exports = class ContactController {
   static async getContacts(req, res, next) {
     try {
       const { page, limit } = req.query;
-      const options = { page, limit };
 
-      const contacts = await contactModel.paginate({}, options, (error, result) => result.docs);
+      const contacts = await ContactService.getContacts(page, limit);
+      console.log(contacts);
 
       return res.status(200).json(contacts);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(500, "Request completed with error", res));
     }
   }
 
@@ -33,17 +29,13 @@ module.exports = class ContactController {
    */
   static async getContactById(req, res, next) {
     try {
-      const contactId = req.params.id;
+      const { id } = req.params;
 
-      const desiredContact = await contactModel.findById(contactId);
-
-      if (!desiredContact) {
-        throw new ErrorHandler(404, "Not found", res);
-      }
+      const desiredContact = await ContactService.getContactById(id);
 
       return res.status(200).json(desiredContact);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(404, "Not found", res));
     }
   }
 
@@ -54,11 +46,13 @@ module.exports = class ContactController {
    */
   static async addContact(req, res, next) {
     try {
-      const newContact = await contactModel.create(req.body);
+      const contactData = req.body;
+
+      const newContact = await ContactService.addContact(contactData);
 
       return res.status(201).json(newContact);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(500, "Contact not created", res));
     }
   }
 
@@ -69,17 +63,13 @@ module.exports = class ContactController {
    */
   static async removeContact(req, res, next) {
     try {
-      const contactId = req.params.id;
+      const { id } = req.params;
 
-      const deletedContact = await contactModel.findByIdAndDelete(contactId);
-
-      if (!deletedContact) {
-        throw new ErrorHandler(404, "Not found", res);
-      }
+      const deletedContact = await ContactService.removeContact(id);
 
       return res.status(200).json(deletedContact);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(404, "Not found", res));
     }
   }
 
@@ -90,17 +80,13 @@ module.exports = class ContactController {
    */
   static async updContact(req, res, next) {
     try {
-      const contactId = req.params.id;
+      const { id } = req.params;
 
-      const updatedContact = await contactModel.findContactByIdAndUpdate(contactId, req.body);
-
-      if (!updatedContact) {
-        throw new ErrorHandler(404, "Not found", res);
-      }
+      const updatedContact = await ContactService.updContact(id, req.body);
 
       return res.status(200).json(updatedContact);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(404, "Not found", res));
     }
   }
 
@@ -110,10 +96,12 @@ module.exports = class ContactController {
    * @param {import('express').NextFunction} next
    */
   static validateId(req, res, next) {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    if (!ObjectId.isValid(id)) {
-      throw new ErrorHandler(400, "Bad Request", res);
+      ContactService.validateId(id);
+    } catch (error) {
+      next(new ErrorHandler(400, "Bad Request", res));
     }
 
     next();
@@ -136,7 +124,9 @@ module.exports = class ContactController {
      */
     const result = addContactRules.validate(req.body);
 
-    if (result.error) {
+    try {
+      ContactService.errorChecking(result);
+    } catch (error) {
       throw new ErrorHandler(400, "missing required name field", res);
     }
 
@@ -160,8 +150,10 @@ module.exports = class ContactController {
      */
     const result = updContactRules.validate(req.body);
 
-    if (result.error || !noEmptyBody(req.body)) {
-      throw new ErrorHandler(400, "missing fields", res);
+    try {
+      ContactService.validateUpdContact(result, req.body);
+    } catch (error) {
+      next(new ErrorHandler(400, "missing fields", res));
     }
 
     next();

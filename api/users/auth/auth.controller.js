@@ -1,18 +1,8 @@
 const Joi = require("joi");
-const bcryptjs = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
-const userModel = require("../user.model");
-const {
-  checkUserByToken,
-  createAvatar,
-  deleteTempFile,
-  getUserIdWithToken,
-  nonSecretUserInfo,
-} = require("../../helpers");
+const AuthService = require("./auth.service");
+const UserService = require("../user.service");
 const ErrorHandler = require("../../errorHandlers/ErrorHandler");
-
-require("dotenv").config();
 
 module.exports = class AuthController {
   /**
@@ -23,19 +13,22 @@ module.exports = class AuthController {
   static async registerUser(req, res, next) {
     try {
       const { password, email } = req.body;
-      const { COST_FACTOR, PORT } = process.env;
 
-      const passwordHash = await bcryptjs.hash(password, parseInt(COST_FACTOR)); //COST_FACTOR - number of hashing cycles
+      if (!req.file) {
+        req.file = { ...(await AuthService.createDefaultAvatar(email)) };
+      }
+      const { filename, path } = req.file;
 
-      const registeredUser = await userModel.create({
-        email,
-        passwordHash,
-        avatarURL: `http://localhost:${PORT}${req.file.path}`,
-      });
+      req.file = {
+        ...req.file,
+        ...(await UserService.minifyImage(filename, path)),
+      };
 
-      return res.status(201).json(nonSecretUserInfo(registeredUser));
+      const registeredUserNonSecretInfo = await AuthService.signUp(password, email, path);
+
+      return res.status(201).json(registeredUserNonSecretInfo);
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(500, "User registration error", res));
     }
   }
 
@@ -46,15 +39,20 @@ module.exports = class AuthController {
    */
   static async loginUser(req, res, next) {
     try {
-      const { email } = req.body;
+      const { email, password } = req.body;
 
-      const userWithAnUpdatedToken = await userModel.findUserByEmail(email);
-      const { token } = userWithAnUpdatedToken;
-      const user = nonSecretUserInfo(userWithAnUpdatedToken);
+      const existingUser = await AuthService.existingUserByEmail(email, null, true);
+      const { _id, passwordHash } = existingUser;
+
+      await AuthService.isPasswordValid(password, passwordHash);
+
+      const token = await AuthService.createToken(_id);
+
+      const user = AuthService.getLoginedUserNonSecretInfo(existingUser);
 
       return res.status(200).json({ token, user });
     } catch (error) {
-      next(new ErrorHandler(503, "Service Unavailable", res));
+      next(new ErrorHandler(401, "Email or password is wrong", res));
     }
   }
 
@@ -66,11 +64,12 @@ module.exports = class AuthController {
   static async logoutUser(req, res, next) {
     try {
       const { _id } = req.user;
-      await userModel.updToken(_id, null);
+
+      await AuthService.logOut(_id);
 
       return res.status(204).send();
     } catch (error) {
-      next(new ErrorHandler(401, "Not authorized", res));
+      next(new ErrorHandler(500, "User logout error", res));
     }
   }
 
@@ -82,15 +81,10 @@ module.exports = class AuthController {
   static async authorize(req, res, next) {
     try {
       const authorizationHeader = req.get("Authorization");
-      const token = authorizationHeader.replace("Bearer ", "");
 
-      const userId = await getUserIdWithToken(token);
-
-      const user = await userModel.findById(userId);
-      checkUserByToken(user);
+      const user = await AuthService.autorize(authorizationHeader);
 
       req.user = user;
-      req.token = token;
 
       next();
     } catch (error) {
@@ -103,70 +97,7 @@ module.exports = class AuthController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static async existingUserByEmail(req, res, next) {
-    try {
-      const { email } = req.body;
-
-      const existingUser = await userModel.findUserByEmail(email);
-      if (!existingUser) {
-        throw new ErrorHandler(401, "Email or password is wrong", res);
-      }
-      req.existingUser = existingUser;
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
-   */
-  static async isPasswordValid(req, res, next) {
-    try {
-      const { password } = req.body;
-      const { passwordHash } = req.existingUser;
-
-      const isPasswordValid = await bcryptjs.compare(password, passwordHash);
-      if (!isPasswordValid) {
-        throw new ErrorHandler(401, "Email or password is wrong", res);
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
-   */
-  static async generateAndUpdateToken(req, res, next) {
-    try {
-      const { _id } = req.existingUser;
-
-      const token = jwt.sign({ id: _id }, process.env.JWT_SECRET, {
-        expiresIn: 2 * 24 * 60 * 60, // token lifetime: 2 days * 24 hours * 60 minutes * 60 seconds
-      });
-
-      await userModel.updToken(_id, token);
-
-      next();
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
-   */
-  static validateEmailAndPassword(req, res, next) {
+  static async validateEmailAndPassword(req, res, next) {
     const emailAndPasswordRules = Joi.object({
       email: Joi.string().required(),
       password: Joi.string().required(),
@@ -176,10 +107,12 @@ module.exports = class AuthController {
      * @type {email: string, password: string}
      */
     const result = emailAndPasswordRules.validate(req.body);
+    const filePath = req.file ? req.file.path : null;
 
-    if (result.error) {
-      clearTempDir(req);
-      throw new ErrorHandler(400, "You entered invalid data.", res);
+    try {
+      await AuthService.errorChecking(result, filePath);
+    } catch (error) {
+      next(new ErrorHandler(400, "You entered invalid data.", res));
     }
 
     next();
@@ -193,36 +126,13 @@ module.exports = class AuthController {
   static async validateUniqueEmail(req, res, next) {
     try {
       const { email } = req.body;
+      const filePath = req.file ? req.file.path : null;
 
-      const existingUser = await userModel.findUserByEmail(email);
+      await AuthService.existingUserByEmail(email, filePath, false);
 
-      if (existingUser) {
-        deleteTempFile(req);
-        throw new ErrorHandler(409, "Email in use", res);
-      }
-    } catch (error) {
-      next(error);
-    }
-
-    next();
-  }
-
-  /**
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
-   */
-  static async defaultAvatar(req, res, next) {
-    try {
-      const { email } = req.body;
-      if (!req.file) {
-        const avatar = await createAvatar(email);
-
-        req.file = { ...avatar };
-      }
       next();
     } catch (error) {
-      next(error);
+      next(new ErrorHandler(409, "Email in use", res));
     }
   }
 };

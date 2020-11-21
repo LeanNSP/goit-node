@@ -1,19 +1,19 @@
-const { Router } = require('express');
+const { Router } = require("express");
 
-const ContactController = require('./contact.controller');
+const ContactController = require("./contact.controller");
 
 const contactRouter = Router();
 
-contactRouter.get('/', ContactController.getContacts);
+contactRouter.get("/:id", ContactController.validateId, ContactController.getContactById);
 
-contactRouter.get('/:id', ContactController.validateId, ContactController.getContactById);
+contactRouter.get("/", ContactController.getContacts);
 
-contactRouter.post('/', ContactController.validateAddContact, ContactController.addContact);
+contactRouter.post("/", ContactController.validateAddContact, ContactController.addContact);
 
-contactRouter.delete('/:id', ContactController.validateId, ContactController.removeContact);
+contactRouter.delete("/:id", ContactController.validateId, ContactController.removeContact);
 
 contactRouter.patch(
-  '/:id',
+  "/:id",
   ContactController.validateId,
   ContactController.validateUpdContact,
   ContactController.updContact,

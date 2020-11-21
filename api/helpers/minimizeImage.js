@@ -2,10 +2,13 @@ const imagemin = require("imagemin");
 const imageminJpegtran = require("imagemin-jpegtran");
 const imageminPngquant = require("imagemin-pngquant");
 
+require("dotenv").config();
+const { AVATAR_DIR } = process.env;
+
 module.exports = async function minimizeImage(filename) {
   try {
     await imagemin([`tmp/${filename}`], {
-      destination: `public/${process.env.AVATAR_DIR}`,
+      destination: `public/${AVATAR_DIR}`,
       plugins: [
         imageminJpegtran(),
         imageminPngquant({

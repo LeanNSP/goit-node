@@ -13,7 +13,7 @@ module.exports = class UserController {
     const currentUser = req.user;
 
     const currentUserNonSecretInfo = UserService.getCurrentUserNonSecretInfo(currentUser);
-    console.log(currentUserNonSecretInfo);
+
     return res.status(200).json(currentUserNonSecretInfo);
   }
 
@@ -71,7 +71,7 @@ module.exports = class UserController {
 
       return res.status(200).json({ avatarURL });
     } catch (error) {
-      next(new ErrorHandler(500, "Error updating", res));
+      next(new ErrorHandler(400, "Invalid data", res));
     }
   }
 

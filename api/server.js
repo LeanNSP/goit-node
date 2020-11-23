@@ -23,7 +23,7 @@ module.exports = class PhonebookServer {
     this.initRoutes();
     this.initReturnsStaticFiles();
     this.initDB();
-    this.startListening();
+    return this.startListening();
   }
 
   initServer() {
@@ -58,7 +58,7 @@ module.exports = class PhonebookServer {
   }
 
   startListening() {
-    this.server.listen(PORT, () => {
+    return this.server.listen(PORT, () => {
       console.log("\x1b[36m%s\x1b[0m", `Server started listening on port ${PORT}`);
     });
   }

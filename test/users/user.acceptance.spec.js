@@ -94,11 +94,20 @@ describe("Acceptance test user.router", () => {
       });
 
       it("should return 200 authorized", async () => {
-        await request(server)
+        const res = await request(server)
           .get("/users/current")
           .set("Authorization", authorizationHeader)
           .send({})
           .expect(200);
+
+        const resBody = res.body;
+
+        resBody.should.have.property("email").which.is.a.String();
+        resBody.should.have.property("subscription").which.is.a.String();
+
+        resBody.should.not.have.property("_id");
+        resBody.should.not.have.property("passwordHash");
+        resBody.should.not.have.property("token");
       });
     });
   });

@@ -5,4 +5,5 @@ exports.getNonSecretUserInfo = require("./getNonSecretUserInfo");
 exports.getUserIdWithToken = require("./getUserIdWithToken");
 exports.minimizeImage = require("./minimizeImage");
 exports.noEmptyObject = require("./noEmptyObject");
+exports.sgEmailing = require("./sgEmailing");
 exports.uploadMulter = require("./uploadMulter");

@@ -39,14 +39,9 @@ module.exports = class AuthController {
    */
   static async loginUser(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { existingUser } = req;
 
-      const existingUser = await AuthService.existingUserByEmail(email, null, true);
-      const { _id, passwordHash } = existingUser;
-
-      await AuthService.isPasswordValid(password, passwordHash);
-
-      const token = await AuthService.createToken(_id);
+      const token = await AuthService.createToken(existingUser._id);
 
       const user = AuthService.getLoginedUserNonSecretInfo(existingUser);
 
@@ -70,6 +65,23 @@ module.exports = class AuthController {
       return res.status(204).send();
     } catch (error) {
       next(new ErrorHandler(500, "User logout error", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async verifyEmail(req, res, next) {
+    try {
+      const { verificationToken } = req.params;
+
+      await AuthService.verifyEmail(verificationToken);
+
+      return res.status(200).send("OK");
+    } catch (error) {
+      next(new ErrorHandler(400, "User not found", res));
     }
   }
 
@@ -133,6 +145,48 @@ module.exports = class AuthController {
       next();
     } catch (error) {
       next(new ErrorHandler(409, "Email in use", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async validateLoginUser(req, res, next) {
+    try {
+      const { email, password } = req.body;
+
+      const existingUser = await AuthService.existingUserByEmail(email, null, true);
+      const { passwordHash } = existingUser;
+
+      await AuthService.isPasswordValid(password, passwordHash);
+
+      req.existingUser = existingUser;
+
+      next();
+    } catch (error) {
+      next(new ErrorHandler(401, "Email or password is wrong", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async validateIsNotVerifiedEmail(req, res, next) {
+    try {
+      const { existingUser } = req;
+
+      const noVerifiedEmail = existingUser.verificationToken;
+      if (noVerifiedEmail) {
+        throw new Error();
+      }
+
+      next();
+    } catch (error) {
+      next(new ErrorHandler(401, "You are not verified your e-mail", res));
     }
   }
 };

@@ -1,18 +1,20 @@
-const { Router } = require('express');
+const { Router } = require("express");
 
-const AuthController = require('./auth.controller');
+const AuthController = require("./auth.controller");
+const { uploadMulter } = require("../../helpers");
 
 const authRouter = Router();
 
 authRouter.post(
-  '/register',
+  "/register",
+  uploadMulter.upload.single("avatar"),
   AuthController.validateEmailAndPassword,
   AuthController.validateUniqueEmail,
   AuthController.registerUser,
 );
 
-authRouter.post('/login', AuthController.validateEmailAndPassword, AuthController.loginUser);
+authRouter.post("/login", AuthController.validateEmailAndPassword, AuthController.loginUser);
 
-authRouter.post('/logout', AuthController.authorize, AuthController.logoutUser);
+authRouter.post("/logout", AuthController.authorize, AuthController.logoutUser);
 
 module.exports = authRouter;

@@ -1,27 +1,29 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const morgan = require('morgan');
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
 
-const contactRouter = require('./contacts/contact.router');
-const authRouter = require('./users/auth/auth.router');
-const usersRouter = require('./users/user.router');
-const ErrorHandler = require('./errorHandlers/ErrorHandler');
+const contactRouter = require("./contacts/contact.router");
+const authRouter = require("./users/auth/auth.router");
+const usersRouter = require("./users/user.router");
+const connectionOnDB = require("./connectionOnDB");
 
-require('dotenv').config();
+require("dotenv").config();
+
+const { PORT } = process.env;
 
 module.exports = class PhonebookServer {
   constructor() {
     this.server = null;
   }
 
-  async start() {
+  start() {
     this.initServer();
     this.initLogger();
     this.initMiddlewares();
     this.initRoutes();
-    await this.initDB();
-    this.startListening();
+    this.initReturnsStaticFiles();
+    this.initDB();
+    return this.startListening();
   }
 
   initServer() {
@@ -29,36 +31,35 @@ module.exports = class PhonebookServer {
   }
 
   initLogger() {
-    this.server.use(morgan('dev'));
+    this.server.use(morgan("dev"));
   }
 
   initMiddlewares() {
     this.server.use(express.json());
-    this.server.use(cors({ origin: 'http://localhost:3100' }));
+    this.server.use(cors({ origin: `http://localhost:${PORT}` }));
   }
 
   initRoutes() {
-    this.server.use('/contacts', contactRouter);
-    this.server.use('/auth', authRouter);
-    this.server.use('/users', usersRouter);
+    this.server.use("/contacts", contactRouter);
+    this.server.use("/auth", authRouter);
+    this.server.use("/users", usersRouter);
   }
 
-  async initDB() {
-    try {
-      const connectDB = await mongoose.connect(process.env.MONGODB_URL);
+  initReturnsStaticFiles() {
+    this.server.use(express.static("public"));
+  }
 
-      if (connectDB) {
-        console.log('\x1b[33m%s\x1b[0m', 'Database connection successful');
-      }
+  initDB() {
+    try {
+      connectionOnDB();
     } catch (error) {
-      new ErrorHandler(500, 'problem on the server');
       process.exit(1);
     }
   }
 
   startListening() {
-    this.server.listen(process.env.PORT, () => {
-      console.log('\x1b[36m%s\x1b[0m', `Server started listening on port ${process.env.PORT}`);
+    return this.server.listen(PORT, () => {
+      console.log("\x1b[36m%s\x1b[0m", `Server started listening on port ${PORT}`);
     });
   }
 };

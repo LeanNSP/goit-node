@@ -1,14 +1,8 @@
-const Joi = require('joi');
-const bcryptjs = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const Joi = require("joi");
 
-const userModel = require('../user.model');
-const { nonSecretUserInfo } = require('../user.utils');
-const ErrorHandler = require('../../errorHandlers/ErrorHandler');
-
-require('dotenv').config();
-
-const COST_FACTOR = 6; // number of hashing cycles
+const AuthService = require("./auth.service");
+const UserService = require("../user.service");
+const ErrorHandler = require("../../errorHandlers/ErrorHandler");
 
 module.exports = class AuthController {
   /**
@@ -17,19 +11,24 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async registerUser(req, res, next) {
-    const { password, email } = req.body;
-
     try {
-      const passwordHash = await bcryptjs.hash(password, COST_FACTOR);
+      const { password, email } = req.body;
 
-      const registeredUser = await userModel.create({
-        email,
-        passwordHash,
-      });
+      if (!req.file) {
+        req.file = { ...(await AuthService.createDefaultAvatar(email)) };
+      }
+      const { filename, path } = req.file;
 
-      return res.status(201).json(nonSecretUserInfo(registeredUser));
+      req.file = {
+        ...req.file,
+        ...(await UserService.minifyImage(filename, path)),
+      };
+
+      const registeredUserNonSecretInfo = await AuthService.signUp(password, email, path);
+
+      return res.status(201).json(registeredUserNonSecretInfo);
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(500, "User registration error", res));
     }
   }
 
@@ -39,32 +38,21 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async loginUser(req, res, next) {
-    const { password, email } = req.body;
-
     try {
-      const existingUser = await userModel.findUserByEmail(email);
-      if (!existingUser) {
-        throw new ErrorHandler(401, 'Email or password is wrong', res);
-      }
+      const { email, password } = req.body;
 
-      const isPasswordValid = await bcryptjs.compare(password, existingUser.passwordHash);
-      if (!isPasswordValid) {
-        throw new ErrorHandler(401, 'Email or password is wrong', res);
-      }
+      const existingUser = await AuthService.existingUserByEmail(email, null, true);
+      const { _id, passwordHash } = existingUser;
 
-      const { _id } = existingUser;
-      const token = jwt.sign({ id: _id }, process.env.JWT_SECRET, {
-        expiresIn: 2 * 24 * 60 * 60, // token lifetime: 2 days * 24 hours * 60 minutes * 60 seconds
-      });
-      await userModel.updToken(_id, token);
+      await AuthService.isPasswordValid(password, passwordHash);
 
-      const userWithAnUpdatedToken = await userModel.findUserByEmail(email);
+      const token = await AuthService.createToken(_id);
 
-      return res
-        .status(200)
-        .json({ token, user: { ...nonSecretUserInfo(userWithAnUpdatedToken) } });
+      const user = AuthService.getLoginedUserNonSecretInfo(existingUser);
+
+      return res.status(200).json({ token, user });
     } catch (error) {
-      next(new ErrorHandler(503, 'Service Unavailable', res));
+      next(new ErrorHandler(401, "Email or password is wrong", res));
     }
   }
 
@@ -76,11 +64,12 @@ module.exports = class AuthController {
   static async logoutUser(req, res, next) {
     try {
       const { _id } = req.user;
-      await userModel.updToken(_id, null);
+
+      await AuthService.logOut(_id);
 
       return res.status(204).send();
     } catch (error) {
-      next(new ErrorHandler(401, 'Not authorized', res));
+      next(new ErrorHandler(500, "User logout error", res));
     }
   }
 
@@ -91,27 +80,15 @@ module.exports = class AuthController {
    */
   static async authorize(req, res, next) {
     try {
-      const authorizationHeader = req.get('Authorization');
-      const token = authorizationHeader.replace('Bearer ', '');
+      const authorizationHeader = req.get("Authorization");
 
-      let userId;
-      try {
-        userId = await jwt.verify(token, process.env.JWT_SECRET).id;
-      } catch (error) {
-        throw new Error();
-      }
-
-      const user = await userModel.findById(userId);
-      if (!user || user.token !== token) {
-        throw new Error();
-      }
+      const user = await AuthService.autorize(authorizationHeader);
 
       req.user = user;
-      req.token = token;
 
       next();
     } catch (error) {
-      next(new ErrorHandler(401, 'Not authorized', res));
+      next(new ErrorHandler(401, "Not authorized", res));
     }
   }
 
@@ -120,7 +97,7 @@ module.exports = class AuthController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static validateEmailAndPassword(req, res, next) {
+  static async validateEmailAndPassword(req, res, next) {
     const emailAndPasswordRules = Joi.object({
       email: Joi.string().required(),
       password: Joi.string().required(),
@@ -130,9 +107,12 @@ module.exports = class AuthController {
      * @type {email: string, password: string}
      */
     const result = emailAndPasswordRules.validate(req.body);
+    const filePath = req.file ? req.file.path : null;
 
-    if (result.error) {
-      throw new ErrorHandler(400, 'You entered invalid data.', res);
+    try {
+      await AuthService.errorChecking(result, filePath);
+    } catch (error) {
+      next(new ErrorHandler(400, "You entered invalid data.", res));
     }
 
     next();
@@ -144,18 +124,15 @@ module.exports = class AuthController {
    * @param {import('express').NextFunction} next
    */
   static async validateUniqueEmail(req, res, next) {
-    const { email } = req.body;
-
     try {
-      const existingUser = await userModel.findUserByEmail(email);
+      const { email } = req.body;
+      const filePath = req.file ? req.file.path : null;
 
-      if (existingUser) {
-        throw new ErrorHandler(409, 'Email in use', res);
-      }
+      await AuthService.existingUserByEmail(email, filePath, false);
+
+      next();
     } catch (error) {
-      next(error);
+      next(new ErrorHandler(409, "Email in use", res));
     }
-
-    next();
   }
 };

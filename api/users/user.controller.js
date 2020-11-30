@@ -1,11 +1,7 @@
 const Joi = require("joi");
 
-const { nonSecretUserInfo } = require("./user.utils");
-
-const userModel = require("./user.model");
+const UserService = require("./user.service");
 const ErrorHandler = require("../errorHandlers/ErrorHandler");
-
-require("dotenv").config();
 
 module.exports = class UserController {
   /**
@@ -16,7 +12,9 @@ module.exports = class UserController {
   static getCurrentUser(req, res, next) {
     const currentUser = req.user;
 
-    return res.status(200).json(nonSecretUserInfo(currentUser));
+    const currentUserNonSecretInfo = UserService.getCurrentUserNonSecretInfo(currentUser);
+
+    return res.status(200).json(currentUserNonSecretInfo);
   }
 
   /**
@@ -24,32 +22,15 @@ module.exports = class UserController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static async getFilteredBySubscription(req, res, next) {
+  static async getUsersBySubscription(req, res, next) {
     try {
       const { sub } = req.query;
-      const users = await userModel.find({ subscription: sub });
-      const usersNonSecretsInfo = users.map(user => nonSecretUserInfo(user));
 
-      return res.status(200).json(usersNonSecretsInfo);
-    } catch (error) {}
-  }
+      const users = await UserService.getUsersBySubscription(sub);
 
-  /**
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   * @param {import('express').NextFunction} next
-   */
-  static async updSubscription(req, res, next) {
-    const { _id } = req.user;
-    const { subscription } = req.body;
-    console.log(_id);
-
-    try {
-      await userModel.updSubscr(_id, subscription);
-
-      return res.status(204).send();
+      return res.status(200).json(users);
     } catch (error) {
-      next(new ErrorHandler(401, "Not authorized", res));
+      next(new ErrorHandler(500, "Filter error", res));
     }
   }
 
@@ -58,7 +39,48 @@ module.exports = class UserController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static validateSubscription(req, res, next) {
+  static async updSubscription(req, res, next) {
+    try {
+      const { _id } = req.user;
+      const { subscription } = req.body;
+
+      await UserService.updSubscription(_id, subscription);
+
+      return res.status(204).send();
+    } catch (error) {
+      next(new ErrorHandler(500, "Error updating", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static async updateAvatar(req, res, next) {
+    try {
+      const { _id } = req.user;
+      const { filename, path } = req.file;
+
+      req.file = {
+        ...req.file,
+        ...(await UserService.minifyImage(filename, path)),
+      };
+
+      const avatarURL = await UserService.updateAvatar(_id, req.file.path);
+
+      return res.status(200).json({ avatarURL });
+    } catch (error) {
+      next(new ErrorHandler(400, "Invalid data", res));
+    }
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static validateBodySubscription(req, res, next) {
     const subscriptionRules = Joi.object({
       subscription: Joi.string().required(),
     });
@@ -79,15 +101,42 @@ module.exports = class UserController {
    * @param {import('express').Response} res
    * @param {import('express').NextFunction} next
    */
-  static validateSubscriptionEnum(req, res, next) {
-    const { subscription } = req.body;
-    const subEnum = process.env.SUBSCRIPTION_ENUM.split(" ");
+  static validateBodyBySubscriptionsEnum(req, res, next) {
+    try {
+      const { subscription } = req.body;
 
-    const result = subEnum.find(item => item === subscription);
-    if (!result) {
-      throw new ErrorHandler(400, "Your subscription invalid.", res);
+      UserService.validateBySubscriptionEnum(subscription);
+    } catch (error) {
+      next(new ErrorHandler(400, "Your subscription invalid.", res));
     }
+    next();
+  }
 
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static validateQuerySub(req, res, next) {
+    if (!req.query.sub) {
+      throw new Error();
+    }
+    next();
+  }
+
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
+  static validateQueryBySubscriptionsEnum(req, res, next) {
+    try {
+      const { sub } = req.query;
+
+      UserService.validateBySubscriptionEnum(sub);
+    } catch (error) {
+      next(new ErrorHandler(400, "Your subscription invalid.", res));
+    }
     next();
   }
 };

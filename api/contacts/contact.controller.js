@@ -15,7 +15,10 @@ module.exports = class ContactController {
    */
   static async getContacts(req, res, next) {
     try {
-      const contacts = await contactModel.find();
+      const { page, limit } = req.query;
+      const options = { page, limit };
+
+      const contacts = await contactModel.paginate({}, options, (error, result) => result.docs);
 
       return res.status(200).json(contacts);
     } catch (error) {
@@ -69,7 +72,6 @@ module.exports = class ContactController {
       const contactId = req.params.id;
 
       const deletedContact = await contactModel.findByIdAndDelete(contactId);
-      console.log(deletedContact);
 
       if (!deletedContact) {
         throw new ErrorHandler(404, 'Not found', res);

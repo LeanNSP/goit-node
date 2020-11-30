@@ -1,5 +1,6 @@
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
 
 const userModel = require("../user.model");
 const {
@@ -8,6 +9,7 @@ const {
   deleteTempFile,
   getNonSecretUserInfo,
   getUserIdWithToken,
+  sgEmailing,
 } = require("../../helpers");
 
 require("dotenv").config();
@@ -25,11 +27,16 @@ module.exports = class AuthService {
     try {
       const passwordHash = await bcryptjs.hash(password, parseInt(COST_FACTOR)); //COST_FACTOR - number of hashing cycles
 
+      const verificationToken = uuidv4();
+
       const registeredUser = await userModel.create({
         email,
         passwordHash,
         avatarURL: `http://localhost:${PORT}${path}`,
+        verificationToken,
       });
+
+      await sgEmailing(email, verificationToken);
 
       return getNonSecretUserInfo(registeredUser);
     } catch (error) {
@@ -55,6 +62,24 @@ module.exports = class AuthService {
   static async logOut(_id) {
     try {
       await userModel.updToken(_id, null);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @param {string} verificationToken
+   *
+   */
+  static async verifyEmail(verificationToken) {
+    try {
+      const user = await userModel.findUserByVerificationToken(verificationToken);
+
+      if (!user) {
+        throw new Error();
+      }
+
+      await userModel.deleteVerificationToken(user._id);
     } catch (error) {
       throw error;
     }

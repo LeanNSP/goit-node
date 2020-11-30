@@ -13,8 +13,16 @@ authRouter.post(
   AuthController.registerUser,
 );
 
-authRouter.post("/login", AuthController.validateEmailAndPassword, AuthController.loginUser);
+authRouter.post(
+  "/login",
+  AuthController.validateLoginUser,
+  AuthController.validateIsNotVerifiedEmail,
+  AuthController.validateEmailAndPassword,
+  AuthController.loginUser,
+);
 
 authRouter.post("/logout", AuthController.authorize, AuthController.logoutUser);
+
+authRouter.get("/verify/:verificationToken", AuthController.verifyEmail);
 
 module.exports = authRouter;
